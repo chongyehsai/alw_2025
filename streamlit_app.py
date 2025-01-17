@@ -18,10 +18,8 @@ prompt = ChatPromptTemplate.from_template(template)
 # Streamlit App
 st.title("LangChain LLM Q&A")
 
-# User input for the question
-question = st.text_input("Ask me anything:")
-
-# Load FAISS index
+# Initialize FAISS retriever
+pdf_retriever = None
 try:
     # Load pre-indexed FAISS database and metadata with dangerous deserialization enabled
     db_pdf = FAISS.load_local("Database/PDF", OpenAIEmbeddings(), allow_dangerous_deserialization=True)
@@ -30,8 +28,9 @@ try:
 except Exception as e:
     st.write("Error loading FAISS index:", e)
 
-# Process user input when button is clicked
-if st.button("Get Answer"):
+# Function to process the question and get the answer
+def get_answer():
+    question = st.session_state.question_input
     if question and pdf_retriever:
         # Retrieve context relevant to the question
         retrieved_docs = pdf_retriever.get_relevant_documents(question)
@@ -42,6 +41,17 @@ if st.button("Get Answer"):
         answer = llm(prompt.format(**inputs))
 
         # Display the answer
-        st.write("Answer:", answer.content)
+        st.session_state.answer_output = answer.content
     else:
-        st.write("Please enter a question.")
+        st.session_state.answer_output = "Please enter a question."
+
+# User input for the question
+st.text_input(
+    "Ask me anything:",
+    key="question_input",
+    on_change=get_answer
+)
+
+# Display the answer if available
+if "answer_output" in st.session_state:
+    st.write("Answer:", st.session_state.answer_output)
